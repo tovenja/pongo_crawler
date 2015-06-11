@@ -34,7 +34,7 @@ public class SkillMatchUtils {
                 res.put(StringUtils.lowerCase(term.word), term.word);
             }
         }
-//        System.out.println(res.values());
+        System.out.println(res.values());
         return Lists.newArrayList(res.values());
     }
 
@@ -68,6 +68,19 @@ public class SkillMatchUtils {
         CustomDictionary.add("AppStore", "n 1");
         CustomDictionary.add("Appstore", "n 1");
         CustomDictionary.add("appstore", "n 1");
+        CustomDictionary.add("android OS", "gi 1");
+        CustomDictionary.add("AndroidOS", "gi 1");
+        CustomDictionary.add("Android OS", "gi 1");
+        CustomDictionary.add("Node.js", "gi 1");
+        CustomDictionary.add("node.js", "gi 1");
+        CustomDictionary.add("NODE.js", "gi 1");
+        CustomDictionary.add("NODE.JS", "gi 1");
+        CustomDictionary.add("JAVA SCRIPT", "gi 1");
+        CustomDictionary.add("Java Script", "gi 1");
+        CustomDictionary.add("JavaScript", "gi 1");
+        CustomDictionary.add("javaScript", "gi 1");
+        CustomDictionary.add("javascript", "gi 1");
+        CustomDictionary.add("JAVASCRIPT", "gi 1");
 
         CustomDictionary.insert("算法", "gi 1");
         CustomDictionary.add("数据结构", "gi 1");

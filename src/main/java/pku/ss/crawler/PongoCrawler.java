@@ -5,6 +5,9 @@ import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnels;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import pku.ss.crawler.dao.JobDao;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -15,8 +18,8 @@ import java.util.concurrent.Executors;
 /**
  * Created by _blank_ on 2015/6/10.
  */
+@Service
 public class PongoCrawler {
-
 
     public static final String CRAWLED_DATA = "/data/pongo/crawled.dat";
     public static final String FAILED_DATA = "/data/pongo/failed.dat";
@@ -24,8 +27,10 @@ public class PongoCrawler {
     static BloomFilter<byte[]> filter = BloomFilter.create(Funnels.byteArrayFunnel(), 500);
     private static Logger logger = LoggerFactory.getLogger(PongoJob.class);
     private static ConcurrentHashMultiset<String> failedSet = ConcurrentHashMultiset.create();
+    @Autowired
+    private JobDao jobDao;
 
-    public static void crawler() throws Exception {
+    public void crawler() throws Exception {
         if (Files.exists(Paths.get(CRAWLED_DATA))) {
             logger.info("Crawled data file exist, reading from file...");
             filter = BloomFilter.readFrom(new FileInputStream(CRAWLED_DATA), Funnels.byteArrayFunnel());
@@ -41,8 +46,8 @@ public class PongoCrawler {
             com.google.common.io.Files.createParentDirs(new File(CRAWLED_DATA));
         }
 
-        for (int i = 0; i < 100; i++) {
-            PongoJob job = new PongoJob(i, filter, failedSet);
+        for (int i = 500; i < 1000; i++) {
+            PongoJob job = new PongoJob(i, filter, failedSet, jobDao);
             es.submit(job);
             break;
         }

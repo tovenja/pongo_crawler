@@ -94,6 +94,11 @@ public class SkillMatchUtilsTest {
             "5、有大型软件开发项目和团队合作经验者优先； \n" +
             "6、欢迎优秀的应届毕业生。";
 
+    public String text11 = "1. 熟练掌握各种Web前端技术（HTML/CSS/Javascript等)和跨浏览器、跨终端的开发； \n" +
+            "2. 深刻理解Web标准，对前端性能、可访问性、可维护性等相关知识有实际的了解和实践经验；\n" +
+            "3. 至少熟悉一门非Web前端脚本的语言（如Java/PHP/C++）或Node.js，并有实践经验； \n" +
+            "4. 个性乐观开朗，逻辑性强，善于和各种背景的人合作；";
+
     @Before
     public void before() throws Exception {
     }
@@ -109,7 +114,7 @@ public class SkillMatchUtilsTest {
     public void testGetKeyWords() throws Exception {
 
 
-        for (int i = 0; i < 11; i++) {
+        for (int i = 0; i < 12; i++) {
             SkillMatchUtils.getKeyWords(this.getClass().getField("text" + i).get(this).toString());
         }
     }

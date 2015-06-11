@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.Sets;
 import com.google.common.hash.BloomFilter;
+import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -22,6 +23,7 @@ import org.jsoup.safety.Whitelist;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pku.ss.crawler.dao.JobDao;
 import pku.ss.crawler.model.Job;
 import pku.ss.crawler.utils.SkillMatchUtils;
 
@@ -40,9 +42,9 @@ public class PongoJob implements Runnable {
 
     private int pageNum;
     private BloomFilter<byte[]> filter;
-    private ConcurrentHashMultiset<String> failedSet;
-
-
+    private final ConcurrentHashMultiset<String> failedSet;
+    private JobDao jobDao;
+    private volatile int errorNum;
     private Logger logger = LoggerFactory.getLogger("PongoJob: pageNum[" + pageNum + "]");
 
     private static final String PONGO_URL = "http://job.csdn.net/Search/index?k=&t=1&f=";
@@ -65,15 +67,16 @@ public class PongoJob implements Runnable {
         }
     };
 
-
-    public PongoJob(int pageNum, BloomFilter<byte[]> filter, ConcurrentHashMultiset<String> failedSet) {
+    public PongoJob(int pageNum, BloomFilter<byte[]> filter, ConcurrentHashMultiset<String> failedSet, JobDao jobDao) {
         this.pageNum = pageNum;
         this.filter = filter;
         this.failedSet = failedSet;
+        this.jobDao = jobDao;
     }
 
     @Override
     public void run() {
+        checkErrorNum();
         Thread.currentThread().setName("Page:[" + pageNum + "]");
         String url = PONGO_URL + pageNum;
         String res = getHtml(url);
@@ -83,6 +86,7 @@ public class PongoJob implements Runnable {
         Elements elements = document.select("div.position_list>div.dTit>a");
         int size = 0;
         for (Element ele : elements) {
+            checkErrorNum();
             String uri = ele.attr("href");
             if (StringUtils.startsWith(uri, "/p/")) {
                 size++;
@@ -98,6 +102,11 @@ public class PongoJob implements Runnable {
         logger.info("Page[{}] has {} jobs", pageNum, size);
     }
 
+    private void checkErrorNum() {
+        if (errorNum >= 10)
+            Thread.currentThread().interrupt();
+    }
+
 
     /**
      * Add failed job URI to FailedSet
@@ -106,6 +115,9 @@ public class PongoJob implements Runnable {
      */
     private void addFailedJob(String uri) {
         logger.info("Job {} crawl failed, add to failed set...", uri);
+        synchronized (failedSet) {
+            errorNum++;
+        }
         failedSet.add(uri);
     }
 
@@ -160,6 +172,8 @@ public class PongoJob implements Runnable {
             logger.info("Raw text:{}", rawText);
             Set<String> skills = matchSkills(descElements.get(1).text());
             assembleAndSaveJobDetail(position, workPlace, skills, company, publishTime, rawText, url);
+            //sleep random seconds
+            TimeUnit.SECONDS.sleep(RandomUtils.nextInt(2, 5));
         } catch (Exception e) {
             logger.error("Job parse error...", e);
             return false;
@@ -194,6 +208,12 @@ public class PongoJob implements Runnable {
         Preconditions.checkNotNull(rawText);
         Preconditions.checkNotNull(url);
         Job job = new Job(company, position, skills, null, null, 0, workPlace, date, rawText, url);
+        int res = jobDao.saveJobInfo(job);
+        if (res == 1) {
+            logger.info("Save job to db success...");
+        } else {
+            logger.warn("Save job to db FAILED...");
+        }
     }
 
     /**
