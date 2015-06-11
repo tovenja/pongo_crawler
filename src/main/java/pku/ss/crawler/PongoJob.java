@@ -1,6 +1,8 @@
 package pku.ss.crawler;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ConcurrentHashMultiset;
+import com.google.common.collect.Sets;
 import com.google.common.hash.BloomFilter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -20,8 +22,15 @@ import org.jsoup.safety.Whitelist;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import pku.ss.crawler.model.Job;
+import pku.ss.crawler.utils.SkillMatchUtils;
 
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -30,7 +39,9 @@ import java.util.concurrent.TimeUnit;
 public class PongoJob implements Runnable {
 
     private int pageNum;
-    private BloomFilter<String> filter;
+    private BloomFilter<byte[]> filter;
+    private ConcurrentHashMultiset<String> failedSet;
+
 
     private Logger logger = LoggerFactory.getLogger("PongoJob: pageNum[" + pageNum + "]");
 
@@ -55,9 +66,10 @@ public class PongoJob implements Runnable {
     };
 
 
-    public PongoJob(int pageNum, BloomFilter<String> filter) {
+    public PongoJob(int pageNum, BloomFilter<byte[]> filter, ConcurrentHashMultiset<String> failedSet) {
         this.pageNum = pageNum;
         this.filter = filter;
+        this.failedSet = failedSet;
     }
 
     @Override
@@ -82,29 +94,30 @@ public class PongoJob implements Runnable {
 
 
     /**
-     * 添加失败的任务到失败集合
+     * Add failed job URI to FailedSet
      *
-     * @param uri 失败URI
+     * @param uri URI
      */
-    private synchronized void addFailedJob(String uri) {
-
+    private void addFailedJob(String uri) {
+        logger.info("Job {} crawl failed, add to failed set...", uri);
+        failedSet.add(uri);
     }
 
     /**
-     * 判断是否抓取过，使用BloomFilter查询
+     * To detect if uri already collected
      *
-     * @param uri job详情页
-     * @return 是否抓取过
+     * @param uri job URI
+     * @return Boolean
      */
     private boolean alreadyCollected(String uri) {
-        return filter.mightContain(uri);
+        return filter.mightContain(uri.getBytes());
     }
 
 
     /**
-     * 获取job详细信息，首先获取html内容，然后解析，并存档
+     * collect job detail info
      *
-     * @param uri 超链接
+     * @param uri URI
      */
     private boolean collectJobDetail(String uri) {
         String url = JOB_URL + uri;
@@ -125,29 +138,59 @@ public class PongoJob implements Runnable {
             Preconditions.checkNotNull(companyEle);
             Preconditions.checkNotNull(publishTimeEle);
             Preconditions.checkNotNull(descElements);
-            logger.info("Position:{}", positionEle.ownText());
-            logger.info("WorkPlace:{}", workPlaceEle.ownText());
-            logger.info("Company name:{}", companyEle.ownText());
-            logger.info("Publish time:{}", publishTimeEle.ownText().trim());
-            logger.info("Raw text:{}", descElements.first().text());
-            System.out.println(positionEle.ownText());
-            System.out.println(workPlaceEle.ownText());
-            System.out.println(companyEle.ownText());
-            System.out.println(publishTimeEle.ownText().trim());
-            System.out.println(positionEle.ownText());
+            String position = positionEle.ownText();
+            String workPlace = workPlaceEle.ownText();
+            String company = companyEle.ownText();
+            String publishTime = StringUtils.split(publishTimeEle.ownText().trim(), " ")[0];
+            String rawText = descElements.first().text() + descElements.get(1).text();
+            logger.info("Position:{}", position);
+            logger.info("WorkPlace:{}", workPlace);
+            logger.info("Company name:{}", company);
+            logger.info("Publish time:{}", publishTime);
+            logger.info("Raw text:{}", rawText);
+            Set<String> skills = matchSkills(descElements.get(1).text());
+            assembleAndSaveJobDetail(position, workPlace, skills, company, publishTime, rawText, url);
         } catch (Exception e) {
             logger.error("Job parse error...", e);
             return false;
         }
-        filter.put(uri);
+        filter.put(uri.getBytes());
         return true;
     }
 
+    private Set<String> matchSkills(String desc) {
+        Set<String> res = Sets.newHashSet();
+        if (StringUtils.isBlank(desc)) {
+            return res;
+        }
+        Set<String> skills = Sets.newHashSet(SkillMatchUtils.getKeyWords(desc));
+        logger.info("Get skills:{}", skills);
+        return skills;
+    }
+
+    private void assembleAndSaveJobDetail(String position, String workPlace, Set<String> skills, String company, String publishTime, String rawText, String url) throws Exception {
+        Date date;
+        try {
+            date = new SimpleDateFormat("yyyy/MM/dd").parse(publishTime);
+        } catch (ParseException e) {
+            logger.error("Date parse error, default today...");
+            date = Calendar.getInstance().getTime();
+        }
+        Preconditions.checkNotNull(position);
+        Preconditions.checkNotNull(workPlace);
+        Preconditions.checkNotNull(skills);
+        Preconditions.checkNotNull(company);
+        Preconditions.checkNotNull(date);
+        Preconditions.checkNotNull(rawText);
+        Preconditions.checkNotNull(url);
+        Job job = new Job(company, position, skills, null, null, 0, workPlace, date, rawText, url);
+    }
+
     /**
-     * 使用HttpClient获取转义后的页面html内容，失败会重试2次
+     * Using HttpClient to get html content
      *
-     * @param url 超链接
-     * @return html内容
+     * @param url URL
+     * @return html content
      */
     private String getHtml(String url) {
         HttpGet get = new HttpGet(url);
