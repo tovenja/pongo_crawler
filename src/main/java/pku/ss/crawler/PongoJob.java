@@ -81,15 +81,21 @@ public class PongoJob implements Runnable {
         String cleanRes = Jsoup.clean(res, list);
         Document document = Jsoup.parse(cleanRes);
         Elements elements = document.select("div.position_list>div.dTit>a");
+        int size = 0;
         for (Element ele : elements) {
             String uri = ele.attr("href");
-            if (StringUtils.startsWith(uri, "/p/") && !alreadyCollected(uri)) {
+            if (StringUtils.startsWith(uri, "/p/")) {
+                size++;
+                if (alreadyCollected(uri)) {
+                    continue;
+                }
                 if (!collectJobDetail(uri)) {
                     addFailedJob(uri);
                     logger.info("Job [{}] collect failed...", uri);
                 }
             }
         }
+        logger.info("Page[{}] has {} jobs", pageNum, size);
     }
 
 
@@ -110,7 +116,11 @@ public class PongoJob implements Runnable {
      * @return Boolean
      */
     private boolean alreadyCollected(String uri) {
-        return filter.mightContain(uri.getBytes());
+        boolean res = filter.mightContain(uri.getBytes());
+        if (res) {
+            logger.info("Job {} already collected...", uri);
+        }
+        return res;
     }
 
 

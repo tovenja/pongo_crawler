@@ -29,12 +29,16 @@ public class PongoCrawler {
         if (Files.exists(Paths.get(CRAWLED_DATA))) {
             logger.info("Crawled data file exist, reading from file...");
             filter = BloomFilter.readFrom(new FileInputStream(CRAWLED_DATA), Funnels.byteArrayFunnel());
+        } else {
+            com.google.common.io.Files.createParentDirs(new File(CRAWLED_DATA));
         }
         if (Files.exists(Paths.get(FAILED_DATA))) {
             logger.info("Failed set file exist, reading from file...");
             ObjectInputStream failedIn = new ObjectInputStream(new FileInputStream(FAILED_DATA));
             failedSet = (ConcurrentHashMultiset<String>) failedIn.readObject();
             failedIn.close();
+        } else {
+            com.google.common.io.Files.createParentDirs(new File(CRAWLED_DATA));
         }
 
         for (int i = 0; i < 100; i++) {

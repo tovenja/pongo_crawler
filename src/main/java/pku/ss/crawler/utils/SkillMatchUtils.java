@@ -34,7 +34,7 @@ public class SkillMatchUtils {
                 res.put(StringUtils.lowerCase(term.word), term.word);
             }
         }
-        System.out.println(res.values());
+//        System.out.println(res.values());
         return Lists.newArrayList(res.values());
     }
 
@@ -64,6 +64,10 @@ public class SkillMatchUtils {
         CustomDictionary.add(".net", "gi 1");
         CustomDictionary.add(".NET", "gi 1");
         CustomDictionary.add(".Net", "gi 1");
+        CustomDictionary.add("App Store", "n 1");
+        CustomDictionary.add("AppStore", "n 1");
+        CustomDictionary.add("Appstore", "n 1");
+        CustomDictionary.add("appstore", "n 1");
 
         CustomDictionary.insert("算法", "gi 1");
         CustomDictionary.add("数据结构", "gi 1");
