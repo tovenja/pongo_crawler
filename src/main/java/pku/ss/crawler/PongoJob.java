@@ -34,6 +34,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by _blank_ on 2015/6/10.
@@ -44,14 +45,14 @@ public class PongoJob implements Runnable {
     private BloomFilter<byte[]> filter;
     private final ConcurrentHashMultiset<String> failedSet;
     private JobDao jobDao;
-    private volatile int errorNum;
+    private volatile AtomicInteger errorNum;
     private Logger logger = LoggerFactory.getLogger("PongoJob: pageNum[" + pageNum + "]");
 
     private static final String PONGO_URL = "http://job.csdn.net/Search/index?k=&t=1&f=";
     private static final String JOB_URL = "http://job.csdn.net";
 
 
-    private static RequestConfig config = RequestConfig.custom().setSocketTimeout(10000).setConnectTimeout(10000).setCookieSpec(CookieSpecs.BROWSER_COMPATIBILITY).build();
+    private static RequestConfig config = RequestConfig.custom().setSocketTimeout(30000).setConnectTimeout(30000).setCookieSpec(CookieSpecs.BROWSER_COMPATIBILITY).build();
     private static CloseableHttpClient client = HttpClients.custom().setDefaultRequestConfig(config).build();
     ResponseHandler<? extends String> responseHandler = new ResponseHandler<String>() {
         @Override
@@ -67,11 +68,12 @@ public class PongoJob implements Runnable {
         }
     };
 
-    public PongoJob(int pageNum, BloomFilter<byte[]> filter, ConcurrentHashMultiset<String> failedSet, JobDao jobDao) {
+    public PongoJob(int pageNum, BloomFilter<byte[]> filter, ConcurrentHashMultiset<String> failedSet, JobDao jobDao, AtomicInteger errorNum) {
         this.pageNum = pageNum;
         this.filter = filter;
         this.failedSet = failedSet;
         this.jobDao = jobDao;
+        this.errorNum = errorNum;
     }
 
     @Override
@@ -103,7 +105,10 @@ public class PongoJob implements Runnable {
     }
 
     private void checkErrorNum() {
-        if (errorNum >= 10)
+        if (errorNum.get() == 10) {
+            logger.error("Error number eq 10, interrupt thread...");
+        }
+        if (errorNum.get() >= 10)
             Thread.currentThread().interrupt();
     }
 
@@ -115,9 +120,7 @@ public class PongoJob implements Runnable {
      */
     private void addFailedJob(String uri) {
         logger.info("Job {} crawl failed, add to failed set...", uri);
-        synchronized (failedSet) {
-            errorNum++;
-        }
+        errorNum.getAndIncrement();
         failedSet.add(uri);
     }
 
@@ -173,7 +176,7 @@ public class PongoJob implements Runnable {
             Set<String> skills = matchSkills(descElements.get(1).text());
             assembleAndSaveJobDetail(position, workPlace, skills, company, publishTime, rawText, url);
             //sleep random seconds
-            TimeUnit.SECONDS.sleep(RandomUtils.nextInt(2, 5));
+            TimeUnit.SECONDS.sleep(RandomUtils.nextInt(3, 6));
         } catch (Exception e) {
             logger.error("Job parse error...", e);
             return false;

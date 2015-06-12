@@ -27,10 +27,10 @@ public class SkillMatchUtils {
         List<Term> words = HanLP.segment(text);
         /*Segment nShortSegment = new NShortSegment().enableCustomDictionary(true).enablePlaceRecognize(true).enableOrganizationRecognize(true);
         List<Term> words = nShortSegment.seg(text);*/
-        logger.info("Get keywords :[{}]", words);
+//        logger.info("Get keywords :[{}]", words);
         Map<String, String> res = Maps.newHashMap();
         for (Term term : words) {
-            if ((term.nature.equals(Nature.nx) || term.nature.equals(Nature.gi)) && StringUtils.isNotBlank(term.word)) {
+            if ((term.nature.equals(Nature.nx) || term.nature.equals(Nature.gi)) && StringUtils.isNotBlank(term.word) && StringUtils.length(term.word) > 1) {
                 res.put(StringUtils.lowerCase(term.word), term.word);
             }
         }
@@ -43,6 +43,8 @@ public class SkillMatchUtils {
         CustomDictionary.add("j2ee", "gi 1");
         CustomDictionary.add("C++", "gi 1");
         CustomDictionary.add("c++", "gi 1");
+        CustomDictionary.add("c/c++", "gi 1");
+        CustomDictionary.add("C/C++", "gi 1");
         CustomDictionary.add("db2", "gi 1");
         CustomDictionary.add("DB2", "gi 1");
         CustomDictionary.add("分布式系统", "gi 1");
@@ -81,11 +83,41 @@ public class SkillMatchUtils {
         CustomDictionary.add("javaScript", "gi 1");
         CustomDictionary.add("javascript", "gi 1");
         CustomDictionary.add("JAVASCRIPT", "gi 1");
+        CustomDictionary.add("Java EE", "gi 1");
+        CustomDictionary.add("Java ee", "gi 1");
+        CustomDictionary.add("JavaEE", "gi 1");
+        CustomDictionary.add("javaEE", "gi 1");
+        CustomDictionary.add("java EE", "gi 1");
+        CustomDictionary.add("java ee", "gi 1");
+        CustomDictionary.add("Spring MVC", "gi 1");
+        CustomDictionary.add("SpringMVC", "gi 1");
+        CustomDictionary.add("Spring mvc", "gi 1");
+        CustomDictionary.add("spring MVC", "gi 1");
+        CustomDictionary.add("spring mvc", "gi 1");
 
         CustomDictionary.insert("算法", "gi 1");
         CustomDictionary.add("数据结构", "gi 1");
+        CustomDictionary.add("算法与数据结构", "gi 1");
         CustomDictionary.add("设计模式", "gi 1");
         CustomDictionary.add("数据库", "gi 1");
+        CustomDictionary.add("读写", "n 1");
+        CustomDictionary.add("开发者", "n 1");
+        CustomDictionary.add("1-3", "n 1");
+        CustomDictionary.add("2-3", "n 1");
+        CustomDictionary.add("1-2", "n 1");
+        CustomDictionary.add("3-4", "n 1");
+        CustomDictionary.add("CET-6", "nx 1");
+        CustomDictionary.add("CET-4", "nx 1");
+        CustomDictionary.add("C＃", "gi 1");
+        CustomDictionary.add("c＃", "gi 1");
+        CustomDictionary.add("c#", "gi 1");
+        CustomDictionary.add("C#", "gi 1");
+        CustomDictionary.add("unity3d", "gi 1");
+        CustomDictionary.add("Unity3d", "gi 1");
+        CustomDictionary.add("Unity3D", "gi 1");
+        CustomDictionary.add("Unity 3D", "gi 1");
+        CustomDictionary.add("O2O", "gi 1");
+        CustomDictionary.add("o2o", "gi 1");
 
     }
 

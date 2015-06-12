@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by _blank_ on 2015/6/10.
@@ -24,11 +25,13 @@ public class PongoCrawler {
     public static final String CRAWLED_DATA = "/data/pongo/crawled.dat";
     public static final String FAILED_DATA = "/data/pongo/failed.dat";
     private static ExecutorService es = Executors.newFixedThreadPool(10);
-    static BloomFilter<byte[]> filter = BloomFilter.create(Funnels.byteArrayFunnel(), 500);
+    static BloomFilter<byte[]> filter = BloomFilter.create(Funnels.byteArrayFunnel(), 5000);
     private static Logger logger = LoggerFactory.getLogger(PongoJob.class);
     private static ConcurrentHashMultiset<String> failedSet = ConcurrentHashMultiset.create();
     @Autowired
     private JobDao jobDao;
+
+    private AtomicInteger errorNum = new AtomicInteger(0);
 
     public void crawler() throws Exception {
         if (Files.exists(Paths.get(CRAWLED_DATA))) {
@@ -46,10 +49,9 @@ public class PongoCrawler {
             com.google.common.io.Files.createParentDirs(new File(CRAWLED_DATA));
         }
 
-        for (int i = 500; i < 1000; i++) {
-            PongoJob job = new PongoJob(i, filter, failedSet, jobDao);
+        for (int i = 201; i < 251/*290*/; i++) {
+            PongoJob job = new PongoJob(i, filter, failedSet, jobDao, errorNum);
             es.submit(job);
-            break;
         }
         es.shutdown();
         OutputStream out = new BufferedOutputStream(new FileOutputStream(CRAWLED_DATA));
