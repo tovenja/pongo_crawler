@@ -98,6 +98,54 @@ public class SkillMatchUtilsTest {
             "2. 深刻理解Web标准，对前端性能、可访问性、可维护性等相关知识有实际的了解和实践经验；\n" +
             "3. 至少熟悉一门非Web前端脚本的语言（如Java/PHP/C++）或Node.js，并有实践经验； \n" +
             "4. 个性乐观开朗，逻辑性强，善于和各种背景的人合作；";
+    public String text12 = "EMC上海社招内推Java Software Engineer-141325职位，若您有相关工作经验，感兴趣并条件符合（注意工作年限要求），请标明应聘职位，将英文简历发送至邮箱（标题格式：应聘职位代码 + 姓名）：\n" +
+            "\n" +
+            "zksky_life@ hotmail.com\n" +
+            "\n" +
+            "================================================\n" +
+            "\n" +
+            "Software Engineer - Tool Development\n" +
+            "Location:Shanghai, China\n" +
+            "\n" +
+            "Req#: 141325BR\n" +
+            "\n" +
+            "Job Description\n" +
+            "\n" +
+            "As a member of the Release Engineering Group in the CTD organization, this person will be responsible for USD software tools development, maintaining and software development environment, nightly build support, source control system administration.\n" +
+            "\n" +
+            "The candidate must have strong technical background in Java with solid understanding of the software development lifecycle and be able to understand and follow the EMC Software Development Process. The candidate must demonstrate flexibility, strong motivation, and excellent problem solving skills.\n" +
+            "\n" +
+            "Responsibilities include\n" +
+            "\n" +
+            "- Develop new tools in Java on both Window and Linux platforms to support the software development environment.\n" +
+            "\n" +
+            "- Maintaining the legacy tools\n" +
+            "\n" +
+            "- Automate the build process and support nightly build.\n" +
+            "\n" +
+            "Skills Required\n" +
+            "\n" +
+            "- Strong coding skill is required using with Java language, knowing Perl/Python/PHP/Shell is a plus\n" +
+            "\n" +
+            "- Be able to write new tools and maintain existing tools.\n" +
+            "\n" +
+            "- Will clarify new feature requirements, design software to meet the requirements, and implement the design\n" +
+            "\n" +
+            "- Must familiar with programming on both Window and Linux platforms.\n" +
+            "\n" +
+            "- Strong communication skills, both written and spoken, are absolutely required. Good English skills as well.\n" +
+            "\n" +
+            "- Knowledge and experience using, maintaining and writing tools for Source control such as AccuRev, ClearCase, SVN and CVS is a plus.\n" +
+            "\n" +
+            "- Ability to multi-task\n" +
+            "\n" +
+            "- Good problem diagnosing and solving skills.\n" +
+            "\n" +
+            "\n" +
+            "\n" +
+            "Education/Experience\n" +
+            "\n" +
+            "BS, MS in Computer Science, Computer Engineering or closely related field, plus at least 1~3 years relevant experience, depending on degree.";
 
     @Before
     public void before() throws Exception {
@@ -114,7 +162,7 @@ public class SkillMatchUtilsTest {
     public void testGetKeyWords() throws Exception {
 
 
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 13; i++) {
             SkillMatchUtils.getKeyWords(this.getClass().getField("text" + i).get(this).toString());
         }
     }

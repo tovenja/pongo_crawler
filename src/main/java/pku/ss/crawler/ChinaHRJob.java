@@ -6,16 +6,7 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.BloomFilter;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.config.CookieSpecs;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -28,53 +19,51 @@ import pku.ss.crawler.model.Job;
 import pku.ss.crawler.utils.HtmlUtils;
 import pku.ss.crawler.utils.SkillMatchUtils;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Created by _blank_ on 2015/6/10.
+ * Created with IntelliJ IDEA.
+ * User: Blank
+ * Date: 2015/6/14
+ * Time: 13:07
  */
-public class PongoJob implements Runnable {
-
+public class ChinaHRJob implements Runnable {
     private int pageNum;
     private BloomFilter<byte[]> filter;
     private final ConcurrentHashMultiset<String> failedSet;
     private JobDao jobDao;
-    private volatile AtomicInteger errorNum;
-    private Logger logger = LoggerFactory.getLogger("PongoJob: pageNum[" + pageNum + "]");
+    private volatile int errorNum;
+    private Logger logger = LoggerFactory.getLogger("ChinaHR:");
 
-    private static final String PONGO_URL = "http://job.csdn.net/Search/index?k=&t=1&f=";
-    private static final String JOB_URL = "http://job.csdn.net";
+    private static final String CHINA_HR = "http://www.chinahr.com/so/0/0-0-0-0-0-0-0-1001_1002__1001_1003_1018__1001_1003_1021__1001_1003_1019__1001_1003_1040-1001_1001-0-0-0-0-0-0-0/p";
 
-    public PongoJob(int pageNum, BloomFilter<byte[]> filter, ConcurrentHashMultiset<String> failedSet, JobDao jobDao, AtomicInteger errorNum) {
+    public ChinaHRJob(int pageNum, BloomFilter<byte[]> filter, ConcurrentHashMultiset<String> failedSet, JobDao jobDao) {
         this.pageNum = pageNum;
         this.filter = filter;
         this.failedSet = failedSet;
         this.jobDao = jobDao;
-        this.errorNum = errorNum;
     }
 
     @Override
     public void run() {
         checkErrorNum();
         Thread.currentThread().setName("Page:[" + pageNum + "]");
-        String url = PONGO_URL + pageNum;
+        String url = CHINA_HR + pageNum;
         String res = HtmlUtils.getHtml(url);
-        Whitelist list = Whitelist.none().addTags("a", "div").addAttributes("a", "href").addAttributes("div", "class");
+        Whitelist list = Whitelist.none().addTags("a").addAttributes("a", "href", "class");
         String cleanRes = Jsoup.clean(res, list);
         Document document = Jsoup.parse(cleanRes);
-        Elements elements = document.select("div.position_list>div.dTit>a");
+        Elements elements = document.select("a.js_detail");
         int size = 0;
         for (Element ele : elements) {
             checkErrorNum();
             String uri = ele.attr("href");
-            if (StringUtils.startsWith(uri, "/p/")) {
+            if (StringUtils.startsWith(uri, "http://www.chinahr.com/job/")) {
                 size++;
                 if (alreadyCollected(uri)) {
                     continue;
@@ -85,14 +74,11 @@ public class PongoJob implements Runnable {
                 }
             }
         }
-        logger.info("Page[{}] has {} jobs", pageNum, size);
+        logger.info("Page[{}] has {} jobs", pageNum / 20, size);
     }
 
     private void checkErrorNum() {
-        if (errorNum.get() == 10) {
-            logger.error("Error number eq 10, interrupt thread...");
-        }
-        if (errorNum.get() >= 10)
+        if (errorNum >= 10)
             Thread.currentThread().interrupt();
     }
 
@@ -104,7 +90,9 @@ public class PongoJob implements Runnable {
      */
     private void addFailedJob(String uri) {
         logger.info("Job {} crawl failed, add to failed set...", uri);
-        errorNum.getAndIncrement();
+        synchronized (failedSet) {
+            errorNum++;
+        }
         failedSet.add(uri);
     }
 
@@ -126,10 +114,9 @@ public class PongoJob implements Runnable {
     /**
      * collect job detail info
      *
-     * @param uri URI
+     * @param url URI
      */
-    private boolean collectJobDetail(String uri) {
-        String url = JOB_URL + uri;
+    private boolean collectJobDetail(String url) {
         if (StringUtils.isBlank(url)) {
             logger.warn("job detail url is empty...");
             return false;
@@ -137,35 +124,46 @@ public class PongoJob implements Runnable {
         String jobHtml = HtmlUtils.getHtml(url);
         try {
             Document document = Jsoup.parse(jobHtml);
-            Element positionEle = document.select("h2.highlight").first();
-            Element workPlaceEle = document.select("ul.left-top>li").get(2);
-            Element companyEle = document.select("dl.top>dd>h4>a").first();
-            Element publishTimeEle = document.select("div.time>span").first();
-            Elements descElements = document.select("div.myj-details-descrip");
+            Element positionEle = document.select("div.fl.job_infoLeft > h1 > a").first();
+            Element workPlaceEle = document.select("body > div.container_header > div.wrap > div.fl.left_size.box_borderGray > div.job_desc > p.infoMa > a").first();
+            Element companyEle = document.select("body > div.container_header > div.wrap > div.fl.left_size.box_borderGray > div.job_info > div.fl.job_infoLeft > span.subC_name > a").first();
+            Element publishTimeEle = document.select("body > div.container_header > div.wrap > div.fl.left_size.box_borderGray > div.job_info > div.fl.job_infoLeft > span.detail_C_Date.fl").first();
+            Elements descElements = document.select("body > div.container_header > div.wrap > div.fl.left_size.box_borderGray > div.job_desc > p.detial_jobSec");
+            Element needNumEle = document.select("body > div.container_header > div.wrap > div.fl.left_size.box_borderGray > div.job_info > div.fl.job_infoLeft > div > span").last();
+            Preconditions.checkNotNull(needNumEle);
             Preconditions.checkNotNull(positionEle);
             Preconditions.checkNotNull(workPlaceEle);
             Preconditions.checkNotNull(companyEle);
             Preconditions.checkNotNull(publishTimeEle);
             Preconditions.checkNotNull(descElements);
+            int needNum = NumberUtils.toInt(needNumEle.ownText().replaceAll("[^0-9]", ""), 0);
             String position = positionEle.ownText();
             String workPlace = workPlaceEle.ownText();
             String company = companyEle.ownText();
-            String publishTime = StringUtils.split(publishTimeEle.ownText().trim(), " ")[0];
-            String rawText = descElements.first().text() + descElements.get(1).text();
+            String publishTime = "20" + StringUtils.substringAfter(publishTimeEle.ownText(), "20");
+            String rawText = descElements.first().text();
+            if (descElements.size() > 1)
+                rawText += descElements.get(1).text();
             logger.info("Position:{}", position);
             logger.info("WorkPlace:{}", workPlace);
             logger.info("Company name:{}", company);
             logger.info("Publish time:{}", publishTime);
+            logger.info("Need num:{}", needNum);
             logger.info("Raw text:{}", rawText);
-            Set<String> skills = matchSkills(descElements.get(1).text());
-            assembleAndSaveJobDetail(position, workPlace, skills, company, publishTime, rawText, url);
+            Set<String> skills;
+            if (descElements.size() > 1) {
+                skills = matchSkills(descElements.get(1).text());
+            } else {
+                skills = matchSkills(descElements.first().text());
+            }
+            assembleAndSaveJobDetail(position, workPlace, skills, company, publishTime, rawText, needNum, url);
             //sleep random seconds
-            TimeUnit.SECONDS.sleep(RandomUtils.nextInt(3, 6));
+            TimeUnit.SECONDS.sleep(RandomUtils.nextInt(1, 4));
         } catch (Exception e) {
             logger.error("Job parse error...", e);
             return false;
         }
-        filter.put(uri.getBytes());
+        filter.put(url.getBytes());
         return true;
     }
 
@@ -179,10 +177,10 @@ public class PongoJob implements Runnable {
         return skills;
     }
 
-    private void assembleAndSaveJobDetail(String position, String workPlace, Set<String> skills, String company, String publishTime, String rawText, String url) throws Exception {
+    private void assembleAndSaveJobDetail(String position, String workPlace, Set<String> skills, String company, String publishTime, String rawText, int needNum, String url) throws Exception {
         Date date;
         try {
-            date = new SimpleDateFormat("yyyy/MM/dd").parse(publishTime);
+            date = new SimpleDateFormat("yyyy-MM-dd").parse(publishTime);
         } catch (ParseException e) {
             logger.error("Date parse error, default today...");
             date = Calendar.getInstance().getTime();
@@ -194,7 +192,7 @@ public class PongoJob implements Runnable {
         Preconditions.checkNotNull(date);
         Preconditions.checkNotNull(rawText);
         Preconditions.checkNotNull(url);
-        Job job = new Job(company, position, skills, null, null, 0, workPlace, date, rawText, url);
+        Job job = new Job(company, position, skills, null, null, needNum, workPlace, date, rawText, url);
         int res = jobDao.saveJobInfo(job);
         if (res == 1) {
             logger.info("Save job to db success...");
@@ -202,4 +200,6 @@ public class PongoJob implements Runnable {
             logger.warn("Save job to db FAILED...");
         }
     }
+
+
 }

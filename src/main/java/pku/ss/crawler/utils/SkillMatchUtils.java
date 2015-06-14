@@ -2,6 +2,7 @@ package pku.ss.crawler.utils;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.corpus.tag.Nature;
 import com.hankcs.hanlp.dictionary.CustomDictionary;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by _blank_ on 2015/6/11.
@@ -19,6 +21,19 @@ import java.util.Map;
 public class SkillMatchUtils {
 
     private static Logger logger = LoggerFactory.getLogger(SkillMatchUtils.class);
+    private static Set<String> forbid = Sets.newHashSet();
+
+    static {
+        forbid.add("www");
+        forbid.add("com");
+        forbid.add("cn");
+        forbid.add("net");
+        forbid.add("--");
+        forbid.add("qq");
+        forbid.add("读写");
+        forbid.add("链接");
+        forbid.add("k-");
+    }
 
     public static List<String> getKeyWords(String text) {
         text = StringUtils.replace(text, "\t", "");
@@ -30,7 +45,10 @@ public class SkillMatchUtils {
 //        logger.info("Get keywords :[{}]", words);
         Map<String, String> res = Maps.newHashMap();
         for (Term term : words) {
-            if ((term.nature.equals(Nature.nx) || term.nature.equals(Nature.gi)) && StringUtils.isNotBlank(term.word) && StringUtils.length(term.word) > 1) {
+            if (StringUtils.contains(term.word, "@") || StringUtils.contains(term.word, "%") || StringUtils.contains(term.word, "~") || forbid.contains(StringUtils.lowerCase(term.word))) {
+                continue;
+            }
+            if ((term.nature.equals(Nature.nx) || term.nature.equals(Nature.gi)) && StringUtils.isNotBlank(term.word) && StringUtils.length(term.word) > 1 && StringUtils.length(term.word) < 10) {
                 res.put(StringUtils.lowerCase(term.word), term.word);
             }
         }
@@ -39,6 +57,7 @@ public class SkillMatchUtils {
     }
 
     private static void configDict() {
+
         CustomDictionary.add("J2EE", "gi 1");
         CustomDictionary.add("j2ee", "gi 1");
         CustomDictionary.add("C++", "gi 1");
@@ -118,6 +137,25 @@ public class SkillMatchUtils {
         CustomDictionary.add("Unity 3D", "gi 1");
         CustomDictionary.add("O2O", "gi 1");
         CustomDictionary.add("o2o", "gi 1");
+        CustomDictionary.add("MAC", "n 1");
+        CustomDictionary.add("Mac", "n 1");
+        CustomDictionary.add("mac", "n 1");
+        CustomDictionary.add("APPLE", "n 1");
+        CustomDictionary.add("Apple", "n 1");
+        CustomDictionary.add("apple", "n 1");
+        CustomDictionary.add("com", "n 1");
+        CustomDictionary.add("cn", "n 1");
+        CustomDictionary.add("--", "n 1");
+        CustomDictionary.add("CET6", "gi 1");
+        CustomDictionary.add("CET4", "gi 1");
+        CustomDictionary.add("cet4", "gi 1");
+        CustomDictionary.add("cet6", "gi 1");
+        CustomDictionary.add("Cet6", "gi 1");
+        CustomDictionary.add("Cet4", "gi 1");
+        CustomDictionary.add("多线程", "gi 1");
+        CustomDictionary.add("高并发", "gi 1");
+        CustomDictionary.add("", "gi 1");
+        CustomDictionary.add("Cet4", "gi 1");
 
     }
 
